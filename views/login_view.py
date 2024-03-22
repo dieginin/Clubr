@@ -21,7 +21,7 @@ from components import (
     UserField,
 )
 from services import Fyrebase
-from utils import error_snackbar
+from utils import error_snackbar, success_snackbar
 
 
 class LoginView(View):
@@ -81,8 +81,12 @@ class LoginView(View):
         self.disabled = True
         self.pg.update()
 
-        # TODO login y mostrar snackbars
-        sleep(3)
+        if self.fb.sign_in_with_username(self.user_field.value, self.pass_field.value):
+            success_snackbar(self.pg, "Inicio correcto")
+            sleep(0.2)
+            self.pg.go("/")
+        else:
+            error_snackbar(self.pg, "Revise sus credenciales")
 
         self.pg.splash = None
         self.disabled = False
