@@ -98,6 +98,34 @@ class Fyrebase:
         except:
             return "Error en registro"
 
+    def _get_email_from_username(self, users_db, username):
+        email = ""
+        try:
+            for user in users_db.each():
+                if user.key() == username:
+                    email = user.val().get("email", "")
+                    break
+        except:
+            pass
+        return email
+
+    def sign_in_with_username(self, username, password):
+        users_db = self.db.child("users").get()
+        email = self._get_email_from_username(users_db, username)
+        if not email:
+            return False
+
+        try:
+            user = self.auth.sign_in_with_email_and_password(email, password)
+            if user:
+                token = user["idToken"]
+                uuid = user["localId"]
+                self._save_token(token, uuid)
+                return True
+        except:
+            return False
+        return False
+
     def sign_in(self, email, password):
         user = self.auth.sign_in_with_email_and_password(email, password)
         if user:
