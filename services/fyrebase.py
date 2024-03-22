@@ -4,7 +4,7 @@ from flet.security import decrypt, encrypt
 
 from utils import FIREBASE_CONFIG as keys
 
-secret_key = "sample"
+SECRET_KEY = "sample"
 
 
 class Fyrebase:
@@ -18,7 +18,7 @@ class Fyrebase:
         self.uuid = None
 
     def _save_token(self, token, uuid):
-        encrypted_token = encrypt(token, secret_key)
+        encrypted_token = encrypt(token, SECRET_KEY)
         self.page.client_storage.set("firebase_token", encrypted_token)
         self.page.client_storage.set("firebase_id", uuid)
         self.idToken = token
@@ -32,26 +32,33 @@ class Fyrebase:
         encrypted_token = self.page.client_storage.get("firebase_token")
         uuid = self.page.client_storage.get("firebase_id")
         if encrypted_token:
-            decrypted_token = decrypt(encrypted_token, secret_key)
+            decrypted_token = decrypt(encrypted_token, SECRET_KEY)
             self.idToken = decrypted_token
             self.uuid = uuid
             try:
                 self.auth.get_account_info(self.idToken)
-                return "Success"
+                return True
             except:
-                return
+                return False
+        return False
+
+    def _user_exists(self, users_db, username, email, club=None):
+        if not users_db:
+            return False
+        for user in users_db.each():
+            if user.key() == username:
+                return "Usuario existente"
+            if "email" in user.val() and user.val()["email"] == email:
+                return "Correo existente"
+            if club and "club" in user.val() and user.val()["club"] == club:
+                return "Club existente, pide el código"
+        return False
 
     def register_new_user(self, club, username, email, password):
         users_db = self.db.child("users").get()
-        try:
-            if username in [u.key() for u in users_db]:
-                return "Usuario existente"
-            if email in [u.val()["email"] for u in users_db]:
-                return "Correo existente"
-            if club in [u.val()["club"] for u in users_db]:
-                return "Club existente, pide el código"
-        except:
-            pass
+        user_exists = self._user_exists(users_db, username, email, club)
+        if user_exists:
+            return user_exists
 
         try:
             self.auth.create_user_with_email_and_password(email, password)
@@ -59,43 +66,37 @@ class Fyrebase:
 
             code = club[-3:] + username[-3:].upper()
             self.db.child("users").child(username).set(
-                {"club": club, "email": email},
-                self.idToken,
+                {"club": club, "email": email}, self.idToken
             )
             self.db.child("clubs").child(club).set(
-                {"club": club, "code": code},
-                self.idToken,
+                {"club": club, "code": code}, self.idToken
             )
+            return True
         except:
-            return "Error en regitro"
-        return True
+            return "Error en registro"
 
     def register_code_user(self, code, username, email, password):
         users_db = self.db.child("users").get()
-        try:
-            if username in [u.key() for u in users_db]:
-                return "Usuario existente"
-            if email in [u.val()["email"] for u in users_db]:
-                return "Correo existente"
-        except:
-            pass
+        user_exists = self._user_exists(users_db, username, email)
+        if user_exists:
+            return user_exists
 
         club = ""
         clubs = self.db.child("clubs").get()
+        for c in clubs:
+            if "code" in c.val() and c.val()["code"] == code:
+                club = c.val()["club"]
+                break
         try:
-            for c in clubs:
-                if c.val()["code"] == code:
-                    club = c.val()["club"]
             self.auth.create_user_with_email_and_password(email, password)
             self.sign_in(email, password)
 
             self.db.child("users").child(username).set(
-                {"club": club, "email": email},
-                self.idToken,
+                {"club": club, "email": email}, self.idToken
             )
+            return True
         except:
             return "Error en registro"
-        return True
 
     def sign_in(self, email, password):
         user = self.auth.sign_in_with_email_and_password(email, password)
