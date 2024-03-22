@@ -116,15 +116,10 @@ class Fyrebase:
             return False
 
         try:
-            user = self.auth.sign_in_with_email_and_password(email, password)
-            if user:
-                token = user["idToken"]
-                uuid = user["localId"]
-                self._save_token(token, uuid)
-                return True
+            self.sign_in(email, password)
         except:
             return False
-        return False
+        return True
 
     def sign_in(self, email, password):
         user = self.auth.sign_in_with_email_and_password(email, password)
