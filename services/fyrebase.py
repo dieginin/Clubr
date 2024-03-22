@@ -42,7 +42,8 @@ class Fyrebase:
                 return False
         return False
 
-    def _user_exists(self, users_db, username, email, club=None):
+    def _user_exists(self, username, email, club=None):
+        users_db = self.db.child("users").get()
         try:
             for user in users_db:
                 if user.key() == username:
@@ -56,8 +57,7 @@ class Fyrebase:
             return False
 
     def register_new_user(self, club, username, email, password):
-        users_db = self.db.child("users").get()
-        user_exists = self._user_exists(users_db, username, email, club)
+        user_exists = self._user_exists(username, email, club)
         if user_exists:
             return user_exists
 
@@ -77,8 +77,7 @@ class Fyrebase:
             return "Error en registro"
 
     def register_code_user(self, code, username, email, password):
-        users_db = self.db.child("users").get()
-        user_exists = self._user_exists(users_db, username, email)
+        user_exists = self._user_exists(username, email)
         if user_exists:
             return user_exists
 
