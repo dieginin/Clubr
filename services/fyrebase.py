@@ -43,16 +43,17 @@ class Fyrebase:
         return False
 
     def _user_exists(self, users_db, username, email, club=None):
-        if not users_db:
+        try:
+            for user in users_db:
+                if user.key() == username:
+                    return "Usuario existente"
+                if "email" in user.val() and user.val()["email"] == email:
+                    return "Correo existente"
+                if club and "club" in user.val() and user.val()["club"] == club:
+                    return "Club existente, pide el código"
             return False
-        for user in users_db.each():
-            if user.key() == username:
-                return "Usuario existente"
-            if "email" in user.val() and user.val()["email"] == email:
-                return "Correo existente"
-            if club and "club" in user.val() and user.val()["club"] == club:
-                return "Club existente, pide el código"
-        return False
+        except:
+            return False
 
     def register_new_user(self, club, username, email, password):
         users_db = self.db.child("users").get()
