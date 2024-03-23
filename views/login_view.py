@@ -81,12 +81,13 @@ class LoginView(View):
         self.disabled = True
         self.pg.update()
 
-        if self.fb.sign_in_with_username(self.user_field.value, self.pass_field.value):
+        log_in = self.fb.log_in(self.user_field.value, self.pass_field.value)
+        if log_in == True:
             success_snackbar(self.pg, "Inicio correcto")
             sleep(0.2)
             self.pg.go("/")
         else:
-            error_snackbar(self.pg, "Revise sus credenciales")
+            error_snackbar(self.pg, log_in)
 
         self.pg.splash = None
         self.disabled = False

@@ -163,14 +163,14 @@ class RegisterView(View):
 
     def register_user(self):
         if self.club_field.opacity == 1:
-            return self.fb.register_new_user(
+            return self.fb.register_club(
                 self.club_field.value,
                 self.user_field.value,
                 self.mail_field.value,
                 self.pass_field.value,
             )
         else:
-            return self.fb.register_code_user(
+            return self.fb.add_member(
                 self.code_field.value,
                 self.user_field.value,
                 self.mail_field.value,

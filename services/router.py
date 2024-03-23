@@ -23,7 +23,7 @@ class Router:
         self.page.on_route_change = self.route_change
 
         self.fb = Fyrebase(page)
-        if self.fb.check_token():
+        if self.fb.active_sesion():
             self.page.go("/")
         else:
             self.page.go("/login")
