@@ -4,6 +4,7 @@ import pyrebase
 from flet import Page
 from flet.security import decrypt, encrypt
 
+from services import BrawlAPI
 from utils import FIREBASE_CONFIG
 
 SECRET_KEY = "sample"
@@ -15,9 +16,11 @@ class Fyrebase:
         self.firebase = pyrebase.initialize_app(FIREBASE_CONFIG)
         self.auth = self.firebase.auth()
         self.db = self.firebase.database()
+        self.ba = BrawlAPI()
 
         self.idToken = None
         self.uuid = None
+        self.club_tag = None
 
     @property
     def clubs(self):
@@ -35,6 +38,14 @@ class Fyrebase:
                 user
                 for club in self.db.child("clubs").get()
                 for user in club.val()["users"].keys()
+            ]
+        except:
+            return []
+
+    def _get_members(self, club):
+        try:
+            return [
+                m for m in self.db.child("clubs").child(club).child("members").get()
             ]
         except:
             return []
@@ -81,14 +92,55 @@ class Fyrebase:
     def register_club(self, club, username, email, password):
         if club in self.clubs:
             return "Club existente, pide el código"
+        try:
+            club_data = self.ba.club(club)
+        except:
+            return "Club tag incorrecto"
 
-        # TODO obtener nombre del club de internet
         code = str(uuid.uuid4()).upper()[:6]
         register = self._register_user(club, username, email, password)
         if register == True:
-            self.db.child("clubs").child(club).update({"code": code})
+            self.db.child("clubs").child(club).update(
+                {"code": code, "name": club_data.name, "trophies": club_data.trophies}
+            )
+            self.page.client_storage.set("club_tag", club)
+            self.update_club()
             return True
         return register
+
+    def update_club(self):
+        club = self.page.client_storage.get("club_tag")
+        members = self._get_members(club)
+
+        club_data = self.ba.club(club)
+        for m in members:
+            if m.key() not in [m.tag for m in club_data.members]:
+                self.db.child("clubs").child(club).child("old_members").child(
+                    m.tag
+                ).set(self.db.child("clubs").child(club).child("members").child(m.tag))
+                self.db.child("clubs").child(club).child("members").child(
+                    m.tag
+                ).remove()
+
+        for m in club_data.members:
+            if m.tag not in members:
+                self.db.child("clubs").child(club).child("members").child(m.tag).set(
+                    {
+                        "name": m.name,
+                        "trophies": m.trophies,
+                        "role": m.role,
+                        "phone": None,
+                        "strikes": 0,
+                    }
+                )
+            else:
+                self.db.child("clubs").child(club).child(m.tag).update(
+                    {
+                        "name": m.name,
+                        "trophies": m.trophies,
+                        "role": m.role,
+                    }
+                )
 
     def _get_club(self, code):
         for clave, val in self.clubs.items():
@@ -98,7 +150,6 @@ class Fyrebase:
 
     def add_member(self, code, username, email, password):
         club = self._get_club(code)
-        print(club, code)
         if not club:
             return "Código in-existente"
 

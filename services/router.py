@@ -25,6 +25,7 @@ class Router:
         self.fb = Fyrebase(page)
         if self.fb.active_sesion():
             self.page.go("/")
+            self.fb.update_club()
         else:
             self.page.go("/login")
 
